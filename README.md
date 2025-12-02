@@ -2,7 +2,7 @@
 
 This application is a real-time oscilloscope simulator built in **Python + PyQt6 + PyQtGraph**.
 It generates two independent waveforms (Wave 1 and Wave 2) and displays both of them along with their **sum**.
-The display is rendered with a **classic green CRT phosphor effect** including glow, afterglow trails, bloom, vignette and subtle noise.
+The display is rendered with a **classic green CRT phosphor effect**.
 
 ---
 
@@ -16,6 +16,7 @@ The display is rendered with a **classic green CRT phosphor effect** including g
 - **Live superposition display**
   - Third oscilloscope shows the sum of Wave 1 and Wave 2
   - Smooth animation with CRT-style glow and persistence
+  - Possibility to switch the third oscilloscope to X/Y positioned dot
 
 - **Neon CRT aesthetics**
   - Green phosphor beam
@@ -37,11 +38,11 @@ The display is rendered with a **classic green CRT phosphor effect** including g
 
 ## 📸 Screenshots
 
-![Screenshot 1](screenshots/1.png)
+![Screenshot 1](screenshots/1.png?)
 
-![Screenshot 2](screenshots/2.png)
+![Screenshot 2](screenshots/2.png?)
 
-![Screenshot 3](screenshots/3.png)
+![Screenshot 3](screenshots/3.png?)
 
 ---
 
