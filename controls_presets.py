@@ -39,7 +39,21 @@ class PresetPanel(QGroupBox):
             row_save.addWidget(b)
         layout.addLayout(row_save)
 
+        # ---- RENDER MODE ----
+        layout.addWidget(QLabel("Render mode (Sum)"))
+
+        row_mode = QHBoxLayout()
+        self.mode_btns = {}
+        for mode, label in [("wave", "Waveform"), ("dot", "XY dot")]:
+            b = QPushButton(label)
+            b.setCheckable(True)
+            b.clicked.connect(self.make_mode_handler(mode))
+            row_mode.addWidget(b)
+            self.mode_btns[mode] = b
+        layout.addLayout(row_mode)
+
         layout.addStretch()
+        self.refresh_mode_buttons()
 
     # ===========================
     #   UTILITY
@@ -64,6 +78,9 @@ class PresetPanel(QGroupBox):
     def make_save_handler(self, n):
         return lambda: self.save_preset(n)
 
+    def make_mode_handler(self, mode):
+        return lambda: self.set_render_mode(mode)
+
     # ===========================
     #   SAVE
     # ===========================
@@ -77,6 +94,7 @@ class PresetPanel(QGroupBox):
             "A2": self.main.wave.A[2],
             "F2": self.main.wave.F[2],
             "W2": self.main.wave.W[2],
+            "mode": getattr(self.main.scope_sum, "mode", "wave"),
         }
 
         self.save_json(data)
@@ -99,6 +117,7 @@ class PresetPanel(QGroupBox):
 
             self.main.ctrl1.refresh_ui()
             self.main.ctrl2.refresh_ui()
+            self.set_render_mode("wave")
             return
 
         # ---- LOAD EXISTING ----
@@ -115,3 +134,19 @@ class PresetPanel(QGroupBox):
         self.main.ctrl1.refresh_ui()
         self.main.ctrl2.refresh_ui()
 
+        # optional render mode
+        self.set_render_mode(p.get("mode", "wave"))
+
+    # ===========================
+    #   RENDER MODE
+    # ===========================
+    def set_render_mode(self, mode):
+        if mode not in ("wave", "dot"):
+            return
+        self.main.scope_sum.set_mode(mode)
+        self.refresh_mode_buttons()
+
+    def refresh_mode_buttons(self):
+        current = getattr(self.main.scope_sum, "mode", "wave")
+        for mode, btn in self.mode_btns.items():
+            btn.setChecked(mode == current)

@@ -6,7 +6,7 @@ from PyQt6.QtCore import QTimer
 
 
 class Oscilloscope(QWidget):
-    def __init__(self, title):
+    def __init__(self, title, mode="wave"):
         super().__init__()
 
         layout = QVBoxLayout()
@@ -25,16 +25,16 @@ class Oscilloscope(QWidget):
         vb = self.plot.getPlotItem().getViewBox()
         vb.disableAutoRange(axis=pg.ViewBox.XAxis)
         vb.disableAutoRange(axis=pg.ViewBox.YAxis)
-        self.plot.setXRange(0, 0.002)
-        self.plot.setYRange(-2, 2)
 
-        # --- curves ---
-        # Main bright beam (glow core)
+        # state
+        self.mode = None
+        self.history = []  # waveform history (for glow)
+        self.dot_history = []  # XY history (for smear)
+
+        # --- curves (waveform) ---
         self.curve_main = self.plot.plot(
             pen=pg.mkPen((0, 255, 0, 255), width=3)
         )
-
-        # Afterglow layers (smearing)
         self.curve_glow1 = self.plot.plot(
             pen=pg.mkPen((0, 255, 0, 80), width=10)
         )
@@ -42,34 +42,37 @@ class Oscilloscope(QWidget):
             pen=pg.mkPen((0, 200, 0, 40), width=18)
         )
 
-        # History for glow
-        self.history = []
-
-        # --- noise overlay ---
-        self.noise_curve = self.plot.plot(
-            pen=pg.mkPen((0, 255, 0, 20), width=1)
+        # XY dot trail
+        self.dot_tail = self.plot.plot(
+            pen=pg.mkPen((0, 255, 0, 50), width=8)
         )
-        self.noise_timer = QTimer()
-        self.noise_timer.timeout.connect(self.update_noise)
-        self.noise_timer.start(40)
+
+        # --- dot (XY) ---
+        self.dot = self.plot.plot(
+            pen=None,
+            symbol="o",
+            symbolBrush=pg.mkBrush(0, 255, 0, 220),
+            symbolSize=12,
+        )
 
         # --- vignette using painter overlay ---
         self.overlay_timer = QTimer()
         self.overlay_timer.timeout.connect(self.repaint)
         self.overlay_timer.start(33)
 
-    # ===========================================
-    # NOISE
-    # ===========================================
-    def update_noise(self):
-        x = np.linspace(0, 1, 200)
-        y = np.random.normal(0, 0.01, 200)
-        self.noise_curve.setData(x, y)
+        self.set_mode(mode)
 
     # ===========================================
     # UPDATE SIGNAL (with afterglow)
     # ===========================================
     def update(self, t, y):
+        if self.mode == "wave":
+            self._update_wave(t, y)
+        elif self.mode == "dot":
+            # for dot mode, expect t to be scalar x, y to be scalar y
+            self._update_dot(t, y)
+
+    def _update_wave(self, t, y):
         # save history for glow
         self.history.insert(0, (t.copy(), y.copy()))
         self.history = self.history[:3]
@@ -85,6 +88,22 @@ class Oscilloscope(QWidget):
         if len(self.history) > 2:
             t2, y2 = self.history[2]
             self.curve_glow2.setData(t2, y2)
+
+        self.dot.setData([], [])
+
+    def _update_dot(self, x, y):
+        # keep short history for smear effect
+        self.dot_history.append((x, y))
+        self.dot_history = self.dot_history[-60:]
+
+        xs, ys = zip(*self.dot_history)
+
+        self.history.clear()
+        self.curve_main.setData([], [])
+        self.curve_glow1.setData([], [])
+        self.curve_glow2.setData([], [])
+        self.dot_tail.setData(xs, ys)
+        self.dot.setData([x], [y])
 
     # ===========================================
     # VIGNETTE / BLOOM OVERLAY
@@ -102,3 +121,26 @@ class Oscilloscope(QWidget):
 
         painter.end()
 
+    # ===========================================
+    # MODE SWITCHING
+    # ===========================================
+    def set_mode(self, mode):
+        self.mode = mode
+        if mode == "wave":
+            self.plot.setXRange(0, 0.002)
+            self.plot.setYRange(-2, 2)
+            self.curve_main.show()
+            self.curve_glow1.show()
+            self.curve_glow2.show()
+            self.dot_tail.hide()
+            self.dot.hide()
+            self.dot_history.clear()
+        elif mode == "dot":
+            # symmetric range for XY dot plot
+            self.plot.setXRange(-2, 2)
+            self.plot.setYRange(-2, 2)
+            self.curve_main.hide()
+            self.curve_glow1.hide()
+            self.curve_glow2.hide()
+            self.dot_tail.show()
+            self.dot.show()

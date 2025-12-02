@@ -52,7 +52,10 @@ class MainApp(QWidget):
 
         self.scope1.update(t1, y1)
         self.scope2.update(t2, y2)
-        self.scope_sum.update(ts, ys)
+        if self.scope_sum.mode == "dot":
+            self.scope_sum.update(y1[-1], y2[-1])
+        else:
+            self.scope_sum.update(ts, ys)
 
 
 if __name__ == "__main__":
@@ -60,4 +63,3 @@ if __name__ == "__main__":
     win = MainApp()
     win.show()
     sys.exit(app.exec())
-
